@@ -1,0 +1,17 @@
+{
+  "LLM_BASE_URL": "http://127.0.0.1:8000/v1",
+  "LLM_MODEL": "deepseek-v4-pro",
+  "LLM_API_KEY": "",
+  "LLM_TEMPERATURE": 0.7,
+  "LLM_MAX_TOKENS": 4096,
+  "VOXCPM2_SCRIPT": "",
+  "WHISPER_CPP_EXE": "whisper-cli",
+  "WHISPER_MODEL": "ggml-medium.bin",
+  "FFMPEG_EXE": "ffmpeg",
+  "OUTPUT_DIR": "",
+  "VIDEO_WIDTH": 1920,
+  "VIDEO_HEIGHT": 1080,
+  "VIDEO_CODEC": "libx264",
+  "AUDIO_CODEC": "aac",
+  "OUTPUT_FORMAT": "mp4"
+}
