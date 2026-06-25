@@ -1,6 +1,13 @@
 # User config (contains API keys)
 config.json
 
+# Large binary tools (downloaded separately)
+tools/ffmpeg.exe
+tools/whisper-cli.exe
+tools/ggml-*.bin
+tools/*.zip
+tools/dl_whisper.py
+
 # Output files
 output/
 

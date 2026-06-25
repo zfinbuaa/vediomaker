@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import os
 
 PROJECT_ROOT = Path(__file__).parent
 CONFIG_FILE = PROJECT_ROOT / "config.json"
@@ -11,9 +12,9 @@ DEFAULTS = {
     "LLM_TEMPERATURE": 0.7,
     "LLM_MAX_TOKENS": 4096,
     "VOXCPM2_SCRIPT": str(PROJECT_ROOT / "tools" / "VoxCPM2" / "tts.py"),
-    "WHISPER_CPP_EXE": "whisper-cli",
-    "WHISPER_MODEL": "ggml-medium.bin",
-    "FFMPEG_EXE": "ffmpeg",
+    "WHISPER_CPP_EXE": str(PROJECT_ROOT / "tools" / "whisper-cli.exe"),
+    "WHISPER_MODEL": str(PROJECT_ROOT / "tools" / "ggml-small.bin"),
+    "FFMPEG_EXE": str(PROJECT_ROOT / "tools" / "ffmpeg.exe"),
     "OUTPUT_DIR": str(PROJECT_ROOT / "output"),
     "VIDEO_WIDTH": 1920,
     "VIDEO_HEIGHT": 1080,
@@ -56,6 +57,11 @@ WHISPER_MODEL = _get("WHISPER_MODEL")
 FFMPEG_EXE = _get("FFMPEG_EXE")
 
 OUTPUT_DIR = Path(_get("OUTPUT_DIR") or DEFAULTS["OUTPUT_DIR"])
+
+_tools_dir = str(PROJECT_ROOT / "tools")
+if _tools_dir not in os.environ.get("PATH", ""):
+    os.environ["PATH"] = _tools_dir + os.pathsep + os.environ.get("PATH", "")
+
 VIDEO_WIDTH = int(_get("VIDEO_WIDTH") or DEFAULTS["VIDEO_WIDTH"])
 VIDEO_HEIGHT = int(_get("VIDEO_HEIGHT") or DEFAULTS["VIDEO_HEIGHT"])
 VIDEO_CODEC = _get("VIDEO_CODEC")

@@ -8,8 +8,31 @@ from config import FFMPEG_EXE, OUTPUT_DIR, VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_CODE
 class VideoCompositor:
     def __init__(self):
         self.ffmpeg = FFMPEG_EXE
+        self._available = None
+
+    def is_available(self) -> bool:
+        if self._available is not None:
+            return self._available
+        try:
+            result = subprocess.run([self.ffmpeg, "-version"], capture_output=True, text=True)
+            self._available = (result.returncode == 0)
+        except FileNotFoundError:
+            self._available = False
+        return self._available
+
+    def _check_available(self):
+        if not self.is_available():
+            raise RuntimeError(
+                f"FFmpeg 未找到，请安装后将其路径加入系统 PATH，"
+                f"或在 config.json 中设置 FFMPEG_EXE 为绝对路径。\n"
+                f"当前配置: FFMPEG_EXE = \"{self.ffmpeg}\"\n"
+                f"Windows 安装: winget install Gyan.FFmpeg\n"
+                f"或手动下载: https://www.gyan.dev/ffmpeg/builds/"
+            )
 
     def compose(self, data: dict, output_name: str = "output.mp4", log_callback=None) -> Path:
+        self._check_available()
+
         segments = data.get("segments", [])
         output = OUTPUT_DIR / output_name
 
@@ -19,11 +42,15 @@ class VideoCompositor:
 
             for i, seg in enumerate(segments):
                 seg_id = seg["id"]
-                narration = Path(seg.get("narration_path", ""))
-                media = Path(seg.get("media_path", ""))
 
-                has_narration = narration.exists()
-                has_media = media.exists()
+                nar_path = seg.get("narration_path", "")
+                med_path = seg.get("media_path", "")
+
+                narration = Path(nar_path) if nar_path else None
+                media = Path(med_path) if med_path else None
+
+                has_narration = narration and narration.is_file()
+                has_media = media and media.is_file()
 
                 if not has_narration and not has_media:
                     continue
@@ -55,7 +82,7 @@ class VideoCompositor:
 
     def _normalize_segment(self, media_path, narration_path, target_dur,
                            media_dur, audio_dur, out_video, out_audio, log_callback):
-        if media_path.exists():
+        if media_path and media_path.is_file():
             if media_dur < target_dur:
                 cmd_v = [
                     self.ffmpeg, "-y",
@@ -93,7 +120,7 @@ class VideoCompositor:
         if result_v.returncode != 0:
             raise RuntimeError(f"视频归一化失败:\n{result_v.stderr}")
 
-        if narration_path.exists():
+        if narration_path and narration_path.is_file():
             if audio_dur < target_dur:
                 cmd_a = [
                     self.ffmpeg, "-y",
@@ -124,16 +151,13 @@ class VideoCompositor:
             subprocess.run(cmd_a, capture_output=True)
 
     def _concat_all(self, segments, output, log_callback):
-        concat_file = output.parent / "concat_list.txt"
         ffmpeg_inputs = []
-        filter_parts = []
         map_parts_v = []
         map_parts_a = []
 
         for i, (v, a) in enumerate(segments):
             ffmpeg_inputs += ["-i", str(v)]
             ffmpeg_inputs += ["-i", str(a)]
-            filter_parts.append(f"[{i*2}:v][{i*2+1}:a]")
             map_parts_v.append(f"[{i*2}:v]")
             map_parts_a.append(f"[{i*2+1}:a]")
 
@@ -155,17 +179,17 @@ class VideoCompositor:
             raise RuntimeError(f"拼接失败:\n{result.stderr}")
 
     def _get_duration(self, path: Path) -> float:
-        cmd = [
-            self.ffmpeg, "-i", str(path),
-            "-f", "null", "-",
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        stderr = result.stderr
-        for line in stderr.split("\n"):
-            if "Duration" in line:
-                parts = line.strip().split("Duration: ")[1].split(",")[0]
-                h, m, s = parts.split(":")
-                return float(h) * 3600 + float(m) * 60 + float(s)
+        try:
+            cmd = [self.ffmpeg, "-i", str(path), "-f", "null", "-"]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            stderr = result.stderr
+            for line in stderr.split("\n"):
+                if "Duration" in line:
+                    parts = line.strip().split("Duration: ")[1].split(",")[0]
+                    h, m, s = parts.split(":")
+                    return float(h) * 3600 + float(m) * 60 + float(s)
+        except Exception:
+            pass
         return 5.0
 
     def _get_audio_duration(self, path: Path) -> float:
