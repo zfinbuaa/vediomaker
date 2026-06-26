@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QLabel, QLineEdit, QTextEdit, QFileDialog,
     QProgressBar, QStatusBar, QSplitter, QGroupBox, QMessageBox,
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QTextCursor
 from pathlib import Path
 import json
@@ -193,19 +193,16 @@ class MainWindow(QMainWindow):
         self.btn_compose.setEnabled(enabled)
         self.statusBar.showMessage("运行中..." if not enabled else "就绪")
 
-    @pyqtSlot(str)
     def _on_log(self, msg):
         self.te_log.append(msg)
         self.te_log.moveCursor(QTextCursor.End)
 
-    @pyqtSlot(dict)
     def _on_script_ready(self, data):
         self._set_buttons_enabled(True)
         self._log(f"文案已生成: {len(data.get('segments', []))} 段")
         self.segment_list.load_data(data)
         self._save_segments_to_file(data)
 
-    @pyqtSlot(dict)
     def _on_audio_ready(self, data):
         self._set_buttons_enabled(True)
         self._log("配音+字幕全部完成")
@@ -213,13 +210,11 @@ class MainWindow(QMainWindow):
         for seg in data.get("segments", []):
             self.segment_list.update_card_by_id(seg["id"], seg)
 
-    @pyqtSlot(str)
     def _on_compose_done(self, output_path):
         self._set_buttons_enabled(True)
         self._log(f"合成完毕: {output_path}")
         QMessageBox.information(self, "完成", f"视频已生成:\n{output_path}")
 
-    @pyqtSlot(str)
     def _on_error(self, msg):
         self._set_buttons_enabled(True)
         self._log(f"错误: {msg}")

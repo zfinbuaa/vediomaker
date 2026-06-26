@@ -10,7 +10,7 @@ class LLMClient:
         self.model = LLM_MODEL
 
     def chat(self, system_prompt: str, user_prompt: str,
-             response_format: str = "json_object", retries: int = 3) -> str:
+             response_format: str = None, retries: int = 3) -> str:
         last_error = None
         for attempt in range(retries):
             try:
@@ -23,16 +23,23 @@ class LLMClient:
                         {"role": "user", "content": user_prompt},
                     ],
                 }
-                try:
-                    kwargs["response_format"] = {"type": response_format}
-                    resp = self.client.chat.completions.create(**kwargs)
-                except Exception:
-                    del kwargs["response_format"]
+                if response_format:
+                    try:
+                        kwargs["response_format"] = {"type": response_format}
+                        resp = self.client.chat.completions.create(**kwargs)
+                    except Exception:
+                        del kwargs["response_format"]
+                        resp = self.client.chat.completions.create(**kwargs)
+                else:
                     resp = self.client.chat.completions.create(**kwargs)
 
                 content = resp.choices[0].message.content
+                finish_reason = resp.choices[0].finish_reason
+
                 if content and content.strip():
-                    return content
+                    return content, finish_reason
+
+                return content, finish_reason
             except Exception as e:
                 last_error = e
                 if attempt < retries - 1:
@@ -54,13 +61,32 @@ class LLMClient:
             ']}'
         )
         user_prompt = f"请根据以下文档内容生成视频分段文案：\n\n{doc_content}"
-        result = self.chat(system_prompt, user_prompt)
+
+        result, finish_reason = self.chat(system_prompt, user_prompt, response_format="json_object")
 
         if not result or not result.strip():
             raise RuntimeError("LLM 返回空内容")
 
         try:
             return json.loads(result)
-        except json.JSONDecodeError as e:
-            print(f"[LLM] JSON解析失败，原始返回前500字符:\n{result[:500]}")
-            raise RuntimeError(f"LLM 返回了非JSON内容: {e}")
+        except json.JSONDecodeError:
+            pass
+
+        if finish_reason == "length":
+            print(f"[LLM] JSON被截断 (max_tokens={LLM_MAX_TOKENS})，请求LLM补全...")
+            cont_prompt = (
+                "你之前生成了一段JSON但被截断了。请从截断点继续完成剩余的JSON，"
+                "只输出剩余部分，确保最终可以拼接成合法JSON。\n"
+                f"已生成的部分末尾：\n{result[-300:]}"
+            )
+            cont_result, _ = self.chat("你是一个JSON补全助手。只输出JSON剩余部分。", cont_prompt, response_format=None)
+            result = result + cont_result
+
+            try:
+                return json.loads(result)
+            except json.JSONDecodeError as e:
+                print(f"[LLM] 补全后仍无法解析，原始返回前500字符:\n{result[:500]}")
+                raise RuntimeError(f"LLM 返回了非JSON内容: {e}")
+        else:
+            print(f"[LLM] JSON解析失败(finish={finish_reason})，原始返回前500字符:\n{result[:500]}")
+            raise RuntimeError("LLM 返回了非JSON内容")
