@@ -3,7 +3,7 @@
   "LLM_MODEL": "deepseek-v4-pro",
   "LLM_API_KEY": "",
   "LLM_TEMPERATURE": 0.7,
-  "LLM_MAX_TOKENS": 4096,
+  "LLM_MAX_TOKENS": 16384,
   "VOXCPM2_SCRIPT": "",
   "WHISPER_CPP_EXE": "./tools/whisper-cli.exe",
   "WHISPER_MODEL": "./tools/ggml-small.bin",

@@ -15,7 +15,7 @@ class SubtitleGenerator:
             return self._cpp_available
         try:
             result = subprocess.run([self.whisper_exe, "--help"],
-                                    capture_output=True, text=True, timeout=10)
+                                    capture_output=True, encoding="utf-8", errors="replace", timeout=10)
             self._cpp_available = (result.returncode == 0)
         except Exception:
             self._cpp_available = False
@@ -57,7 +57,7 @@ class SubtitleGenerator:
             "-of", str(out_base),
         ]
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            result = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=600)
             if result.returncode != 0:
                 print(f"[whisper] cpp 转录失败: {result.stderr[:300]}")
                 return None

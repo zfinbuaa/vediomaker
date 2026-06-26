@@ -14,7 +14,7 @@ class VideoCompositor:
         if self._available is not None:
             return self._available
         try:
-            result = subprocess.run([self.ffmpeg, "-version"], capture_output=True, text=True)
+            result = subprocess.run([self.ffmpeg, "-version"], capture_output=True, encoding="utf-8", errors="replace")
             self._available = (result.returncode == 0)
         except FileNotFoundError:
             self._available = False
@@ -116,7 +116,7 @@ class VideoCompositor:
                 str(out_video),
             ]
 
-        result_v = subprocess.run(cmd_v, capture_output=True, text=True)
+        result_v = subprocess.run(cmd_v, capture_output=True, encoding="utf-8", errors="replace")
         if result_v.returncode != 0:
             raise RuntimeError(f"视频归一化失败:\n{result_v.stderr}")
 
@@ -137,7 +137,7 @@ class VideoCompositor:
                     "-t", str(target_dur),
                     str(out_audio),
                 ]
-            result_a = subprocess.run(cmd_a, capture_output=True, text=True)
+            result_a = subprocess.run(cmd_a, capture_output=True, encoding="utf-8", errors="replace")
             if result_a.returncode != 0:
                 raise RuntimeError(f"音频归一化失败:\n{result_a.stderr}")
         else:
@@ -174,14 +174,14 @@ class VideoCompositor:
             str(output),
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace")
         if result.returncode != 0:
             raise RuntimeError(f"拼接失败:\n{result.stderr}")
 
     def _get_duration(self, path: Path) -> float:
         try:
             cmd = [self.ffmpeg, "-i", str(path), "-f", "null", "-"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace")
             stderr = result.stderr
             for line in stderr.split("\n"):
                 if "Duration" in line:

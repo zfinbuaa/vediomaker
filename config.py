@@ -10,7 +10,7 @@ DEFAULTS = {
     "LLM_MODEL": "deepseek-v4-pro",
     "LLM_API_KEY": "",
     "LLM_TEMPERATURE": 0.7,
-    "LLM_MAX_TOKENS": 8192,
+    "LLM_MAX_TOKENS": 16384,
     "VOXCPM2_SCRIPT": str(PROJECT_ROOT / "tools" / "VoxCPM2" / "tts.py"),
     "WHISPER_CPP_EXE": str(PROJECT_ROOT / "tools" / "whisper-cli.exe"),
     "WHISPER_MODEL": str(PROJECT_ROOT / "tools" / "ggml-small.bin"),
