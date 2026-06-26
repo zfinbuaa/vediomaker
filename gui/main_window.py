@@ -45,7 +45,64 @@ class MainWindow(QMainWindow):
 
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
-        self.statusBar.showMessage("就绪 — 请先配置 LLM，然后选择 .md 文档")
+        self._refresh_component_status()
+
+    def _check_component_status(self) -> str:
+        parts = []
+        parts.append(self._check_llm())
+        parts.append(self._check_tts())
+        parts.append(self._check_whisper())
+        parts.append(self._check_ffmpeg())
+        return "  |  ".join(parts)
+
+    def _check_llm(self) -> str:
+        try:
+            import openai
+            return "LLM: openai \u2705"
+        except ImportError:
+            return "LLM: \u274c"
+
+    def _check_tts(self) -> str:
+        try:
+            import pyttsx3
+            e = pyttsx3.init()
+            voices = e.getProperty("voices")
+            zh = [v for v in voices if "chinese" in v.name.lower() or "zh" in v.id.lower()]
+            if zh:
+                return f"TTS: pyttsx3({zh[0].name}) \u2705"
+            return "TTS: pyttsx3(no-ZH) \u26a0\ufe0f"
+        except Exception:
+            return "TTS: \u274c"
+
+    def _check_whisper(self) -> str:
+        try:
+            import whisper
+            return "whisper: openai-whisper \u2705"
+        except ImportError:
+            pass
+        try:
+            import subprocess
+            r = subprocess.run(["whisper-cli", "--help"], capture_output=True, timeout=5)
+            if r.returncode == 0:
+                return "whisper: whisper-cli \u2705"
+        except Exception:
+            pass
+        return "whisper: \u274c"
+
+    def _check_ffmpeg(self) -> str:
+        try:
+            from config import FFMPEG_EXE
+            import subprocess
+            r = subprocess.run([FFMPEG_EXE, "-version"], capture_output=True, timeout=5)
+            if r.returncode == 0:
+                return f"FFmpeg: {FFMPEG_EXE} \u2705"
+        except Exception:
+            pass
+        return "FFmpeg: \u274c"
+
+    def _refresh_component_status(self):
+        status = self._check_component_status()
+        self.statusBar.showMessage(status)
 
     def _build_config_bar(self):
         layout = QHBoxLayout()
@@ -191,7 +248,8 @@ class MainWindow(QMainWindow):
         self.btn_gen_script.setEnabled(enabled)
         self.btn_gen_audio.setEnabled(enabled)
         self.btn_compose.setEnabled(enabled)
-        self.statusBar.showMessage("运行中..." if not enabled else "就绪")
+        if enabled:
+            self._refresh_component_status()
 
     def _on_log(self, msg):
         self.te_log.append(msg)
