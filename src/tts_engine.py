@@ -24,14 +24,20 @@ class TTSEngine:
             from win32com.client import Dispatch
             v = Dispatch("SAPI.SpVoice")
             voices = v.GetVoices()
-            for i in range(voices.Count):
-                name = voices.Item(i).GetDescription()
-                if "Chinese" in name or "Huihui" in name or "Hanhan" in name:
-                    self._sapi_voice = voices.Item(i)
+            prefer = ["Xiaoxiao", "Yaoyao", "Hanhan", "Huihui",
+                      "Chinese", "chinese", "Simplified"]
+            for target in prefer:
+                for i in range(voices.Count):
+                    name = voices.Item(i).GetDescription()
+                    if target.lower() in name.lower():
+                        self._sapi_voice = voices.Item(i)
+                        break
+                if self._sapi_voice:
                     break
             if not self._sapi_voice and voices.Count > 0:
                 self._sapi_voice = voices.Item(0)
             if self._sapi_voice:
+                print(f"[TTS] SAPI 语音: {self._sapi_voice.GetDescription()}")
                 self._active_backend = self.SAPI
                 return self._active_backend
         except Exception as e:
@@ -69,7 +75,8 @@ class TTSEngine:
         voice = Dispatch("SAPI.SpVoice")
         if self._sapi_voice:
             voice.Voice = self._sapi_voice
-        voice.Rate = 0
+        voice.Rate = -2
+        voice.Volume = 100
 
         tmp_wav = out.with_suffix(".tmp.wav")
         stream = Dispatch("SAPI.SpFileStream")
