@@ -1,18 +1,18 @@
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QLabel, QLineEdit, QTextEdit, QFileDialog,
-    QFrame, QScrollArea,
+    QFrame,
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QUrl
-from PyQt5.QtGui import QFont, QDesktopServices
+from PySide6.QtCore import Qt, Signal, QUrl
+from PySide6.QtGui import QFont, QDesktopServices
 from pathlib import Path
 
 from config import OUTPUT_DIR
 
 
 class SegmentCard(QFrame):
-    text_changed = pyqtSignal(int)
-    media_selected = pyqtSignal(int, str)
+    text_changed = Signal(int)
+    media_selected = Signal(int, str)
 
     def __init__(self, seg_data: dict, parent=None):
         super().__init__(parent)
@@ -23,7 +23,7 @@ class SegmentCard(QFrame):
         self._refresh()
 
     def _init_ui(self):
-        self.setFrameStyle(QFrame.StyledPanel | QFrame.Raised)
+        self.setFrameStyle(QFrame.StyledPanel | QFrame.Plain)
         self.setStyleSheet("SegmentCard { border: 1px solid #ccc; border-radius: 4px; margin: 2px; }")
 
         self._main_layout = QVBoxLayout(self)

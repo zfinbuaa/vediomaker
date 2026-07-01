@@ -1,11 +1,11 @@
 import sys
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QTextEdit, QFileDialog,
-    QProgressBar, QStatusBar, QSplitter, QGroupBox, QMessageBox,
+    QStatusBar, QMessageBox, QApplication,
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QFont, QTextCursor
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont, QTextCursor
 from pathlib import Path
 import json
 
@@ -58,36 +58,37 @@ class MainWindow(QMainWindow):
     def _check_llm(self) -> str:
         try:
             import openai
-            return "LLM: openai \u2705"
+            return "LLM: openai ✅"
         except ImportError:
-            return "LLM: \u274c"
+            return "LLM: ❌"
 
     def _check_tts(self) -> str:
         try:
-            import pyttsx3
-            e = pyttsx3.init()
-            voices = e.getProperty("voices")
-            zh = [v for v in voices if "chinese" in v.name.lower() or "zh" in v.id.lower()]
-            if zh:
-                return f"TTS: pyttsx3({zh[0].name}) \u2705"
-            return "TTS: pyttsx3(no-ZH) \u26a0\ufe0f"
+            from win32com.client import Dispatch
+            v = Dispatch("SAPI.SpVoice")
+            voices = v.GetVoices()
+            for i in range(voices.Count):
+                name = voices.Item(i).GetDescription()
+                if "Chinese" in name or "Microsoft Huihui" in name:
+                    return f"TTS: SAPI(Huihui) ✅"
+            return "TTS: SAPI(no-ZH) ⚠️"
         except Exception:
-            return "TTS: \u274c"
+            return "TTS: ❌"
 
     def _check_whisper(self) -> str:
         try:
             import whisper
-            return "whisper: openai-whisper \u2705"
+            return "whisper: openai-whisper ✅"
         except ImportError:
             pass
         try:
             import subprocess
             r = subprocess.run(["whisper-cli", "--help"], capture_output=True, timeout=5)
             if r.returncode == 0:
-                return "whisper: whisper-cli \u2705"
+                return "whisper: whisper-cli ✅"
         except Exception:
             pass
-        return "whisper: \u274c"
+        return "whisper: ❌"
 
     def _check_ffmpeg(self) -> str:
         try:
@@ -95,14 +96,13 @@ class MainWindow(QMainWindow):
             import subprocess
             r = subprocess.run([FFMPEG_EXE, "-version"], capture_output=True, timeout=5)
             if r.returncode == 0:
-                return f"FFmpeg: {FFMPEG_EXE} \u2705"
+                return f"FFmpeg: ✅"
         except Exception:
             pass
-        return "FFmpeg: \u274c"
+        return "FFmpeg: ❌"
 
     def _refresh_component_status(self):
-        status = self._check_component_status()
-        self.statusBar.showMessage(status)
+        self.statusBar.showMessage(self._check_component_status())
 
     def _build_config_bar(self):
         layout = QHBoxLayout()
@@ -110,23 +110,19 @@ class MainWindow(QMainWindow):
         self.le_url = QLineEdit(LLM_BASE_URL)
         self.le_url.setMaximumWidth(240)
         layout.addWidget(self.le_url)
-
         layout.addWidget(QLabel("模型:"))
         self.le_model = QLineEdit(LLM_MODEL)
         self.le_model.setMaximumWidth(150)
         layout.addWidget(self.le_model)
-
         layout.addWidget(QLabel("API Key:"))
         self.le_api_key = QLineEdit(LLM_API_KEY)
         self.le_api_key.setEchoMode(QLineEdit.Password)
         self.le_api_key.setMaximumWidth(160)
         layout.addWidget(self.le_api_key)
-
         self.btn_save_cfg = QPushButton("保存配置")
         self.btn_save_cfg.setMaximumWidth(80)
         self.btn_save_cfg.clicked.connect(self._save_config)
         layout.addWidget(self.btn_save_cfg)
-
         layout.addStretch()
         self._load_config_fields()
         return layout
@@ -136,7 +132,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("输入文档:"))
         self.le_doc = QLineEdit("README.md")
         layout.addWidget(self.le_doc)
-
         self.btn_pick_doc = QPushButton("浏览")
         self.btn_pick_doc.setMaximumWidth(50)
         self.btn_pick_doc.clicked.connect(self._pick_doc)
@@ -150,17 +145,14 @@ class MainWindow(QMainWindow):
         self.btn_gen_script.setMinimumHeight(36)
         self.btn_gen_script.clicked.connect(self._on_gen_script)
         layout.addWidget(self.btn_gen_script)
-
         self.btn_gen_audio = QPushButton("🎙 全部配音+字幕")
         self.btn_gen_audio.setMinimumHeight(36)
         self.btn_gen_audio.clicked.connect(self._on_gen_audio)
         layout.addWidget(self.btn_gen_audio)
-
         self.btn_compose = QPushButton("📦 一键合成")
         self.btn_compose.setMinimumHeight(36)
         self.btn_compose.clicked.connect(self._on_compose)
         layout.addWidget(self.btn_compose)
-
         layout.addStretch()
         return layout
 
@@ -200,12 +192,10 @@ class MainWindow(QMainWindow):
         if not doc_path or not Path(doc_path).exists():
             QMessageBox.warning(self, "错误", "请选择有效的 .md 文档")
             return
-
         self._save_config()
         self._set_buttons_enabled(False)
         self.te_log.clear()
         self._log("开始生成文案...")
-
         self._worker = SegmentWorker("generate", doc_path=doc_path)
         self._worker.log_signal.connect(self._on_log)
         self._worker.finished_signal.connect(self._on_script_ready)
@@ -217,11 +207,9 @@ class MainWindow(QMainWindow):
         if not data.get("segments"):
             QMessageBox.warning(self, "错误", "请先生成文案")
             return
-
         self._save_config()
         self._set_buttons_enabled(False)
         self._log("开始生成配音+字幕...")
-
         self._worker = SegmentWorker("process_audio", segments_data=data)
         self._worker.log_signal.connect(self._on_log)
         self._worker.finished_signal.connect(self._on_audio_ready)
@@ -233,11 +221,9 @@ class MainWindow(QMainWindow):
         if not data.get("segments"):
             QMessageBox.warning(self, "错误", "没有段落可合成")
             return
-
         self._save_config()
         self._set_buttons_enabled(False)
         self._log("开始合成视频...")
-
         self._worker = SegmentWorker("compose", segments_data=data)
         self._worker.log_signal.connect(self._on_log)
         self._worker.finished_signal.connect(self._on_compose_done)

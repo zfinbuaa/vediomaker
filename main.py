@@ -12,7 +12,6 @@ def main():
         from src.segment_generator import SegmentGenerator
         from src.segment_processor import SegmentProcessor
         from src.video_compositor import VideoCompositor
-        import json
 
         print("=" * 40)
         print("  VideoMaker CLI")
@@ -31,10 +30,8 @@ def main():
         output = comp.compose(data)
         print(f"合成完毕: {output}")
     else:
-        from PyQt5.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
         from gui.main_window import MainWindow
-        from pathlib import Path
-        import json
 
         app = QApplication(sys.argv)
         app.setStyle("Fusion")
@@ -51,7 +48,7 @@ def main():
 
         window = MainWindow()
         window.show()
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
 
 
 if __name__ == "__main__":
