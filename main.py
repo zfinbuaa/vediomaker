@@ -1,6 +1,14 @@
 import argparse
 import sys
 
+if sys.version_info < (3, 10):
+    sys.exit(
+        f"VideoMaker 需要 Python 3.10+，当前: Python {sys.version}\n"
+        "请使用更高版本 Python 运行，例如:\n"
+        "  python main.py              (确保 PATH 中 Python >= 3.10)\n"
+        "  python main.py --cli --doc README.md\n"
+    )
+
 
 def main():
     parser = argparse.ArgumentParser(description="VideoMaker - 视频文案编辑器")
